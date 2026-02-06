@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Map - Live Hacking CTF</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0e17;
+      font-family: 'Share Tech Mono', monospace;
+      color: #c0d0e0;
+      overflow-x: hidden;
+    }
+
+    /* === TOP BAR === */
+    #topbar {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      background: linear-gradient(180deg, #0d1220 0%, #0a0f1a 100%);
+      border-bottom: 1px solid rgba(0, 170, 255, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    #topbar .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #topbar .logo .shield {
+      width: 32px;
+      height: 32px;
+      background: #0af;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #000;
+      font-weight: bold;
+    }
+
+    #topbar .logo span {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: #0af;
+      letter-spacing: 3px;
+    }
+
+    #topbar .center-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #8899aa;
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    #topbar .center-info .wifi-icon { color: #0af; font-size: 16px; }
+
+    #topbar .clock-area { text-align: right; }
+
+    #topbar .clock-area .time {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      color: #ff4466;
+      font-weight: 700;
+    }
+
+    #topbar .clock-area .label {
+      font-size: 10px;
+      color: #556677;
+      letter-spacing: 3px;
+    }
+
+    /* === MAP SECTION === */
+    #map-section {
+      margin: 20px;
+      background: #0d1220;
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+    }
+
+    #map-header h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #e0e8f0;
+      letter-spacing: 3px;
+    }
+
+    #map-header .packets {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #0af;
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    #map-header .packets .icon {
+      font-size: 18px;
+      animation: pulse-glow 2s infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    #map-container {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    #map-canvas {
+      display: block;
+      width: 100%;
+      cursor: crosshair;
+    }
+
+    /* Map overlays */
+    #live-indicator {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border: 1px solid rgba(255, 50, 80, 0.5);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: #ff5577;
+    }
+
+    #live-indicator .dot {
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border-radius: 50%;
+      animation: blink-dot 1.5s infinite;
+    }
+
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; background: #fff; }
+      50% { opacity: 0.3; background: #ff5577; }
+    }
+
+    #active-packets {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      border: 1px solid rgba(170, 0, 255, 0.5);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: #cc88ff;
+    }
+
+    #active-packets .bolt { color: #cc88ff; font-size: 16px; }
+
+    #active-packets .count {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #cc88ff;
+    }
+
+    #coord-display {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      padding: 8px 16px;
+      border: 1px solid rgba(0, 255, 100, 0.4);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      font-size: 13px;
+      letter-spacing: 2px;
+      color: #aabbcc;
+    }
+
+    #map-controls {
+      position: absolute;
+      right: 16px;
+      bottom: 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #map-controls button {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 170, 255, 0.3);
+      background: rgba(10, 20, 40, 0.9);
+      color: #0af;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #map-controls button:hover {
+      background: rgba(0, 170, 255, 0.15);
+      border-color: #0af;
+    }
+
+    /* === NODE INFO POPUP === */
+    #node-info {
+      position: absolute;
+      display: none;
+      background: rgba(10, 15, 30, 0.95);
+      border: 1px solid #0af;
+      border-radius: 6px;
+      padding: 14px 18px;
+      min-width: 200px;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    #node-info .city-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: #0af;
+      margin-bottom: 8px;
+    }
+
+    #node-info .detail {
+      font-size: 12px;
+      color: #8899aa;
+      margin: 3px 0;
+    }
+
+    /* === NETWORK STATUS === */
+    #network-status {
+      margin: 0 20px 20px;
+      background: #0d1220;
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 14px;
+      gap: 16px;
+    }
+
+    .status-row:last-child { margin-bottom: 0; }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-team-info { min-width: 160px; }
+
+    .status-team-info .name {
+      font-size: 13px;
+      color: #e0e8f0;
+      font-weight: bold;
+    }
+
+    .status-team-info .ip {
+      font-size: 11px;
+      color: #556677;
+    }
+
+    .status-bar-container {
+      flex: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .status-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+
+    .status-percent {
+      min-width: 45px;
+      text-align: right;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    /* === TEAM CARDS === */
+    #teams-section {
+      margin: 0 20px 30px;
+      background: #0d1220;
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    #teams-section h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #e0e8f0;
+      letter-spacing: 3px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #teams-section h2 .icon { font-size: 20px; }
+
+    #team-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .team-card {
+      background: rgba(15, 22, 40, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 20px;
+      transition: all 0.3s;
+    }
+
+    .team-card:hover {
+      border-color: rgba(0, 170, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .team-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .team-card-header .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .team-card-header .team-name {
+      font-size: 15px;
+      font-weight: bold;
+      color: #e0e8f0;
+    }
+
+    .team-card-header .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      font-weight: bold;
+      margin-left: auto;
+    }
+
+    .team-card .location, .team-card .ip-addr {
+      font-size: 12px;
+      color: #556677;
+      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .team-card-stats {
+      display: flex;
+      gap: 6px;
+      margin-top: 16px;
+    }
+
+    .stat-box {
+      flex: 1;
+      background: rgba(0, 170, 255, 0.05);
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    .stat-box .value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #0af;
+    }
+
+    .stat-box .label {
+      font-size: 9px;
+      color: #556677;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .team-card-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .threat-badge {
+      font-size: 10px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .threat-low {
+      background: rgba(0, 200, 100, 0.15);
+      color: #00cc66;
+      border: 1px solid rgba(0, 200, 100, 0.3);
+    }
+
+    .threat-medium {
+      background: rgba(255, 200, 0, 0.15);
+      color: #ffcc00;
+      border: 1px solid rgba(255, 200, 0, 0.3);
+    }
+
+    .threat-high {
+      background: rgba(255, 50, 50, 0.15);
+      color: #ff4444;
+      border: 1px solid rgba(255, 50, 50, 0.3);
+    }
+
+    .pending-info { font-size: 11px; color: #556677; }
+
+    /* === FLAG BOX === */
+    #flag-box {
+      position: fixed;
+      left: 20px;
+      top: 80px;
+      border: 1px dashed #0f0;
+      padding: 12px 20px;
+      color: #0f0;
+      display: none;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 200;
+      font-size: 14px;
+      border-radius: 4px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0e17; }
+    ::-webkit-scrollbar-thumb { background: #1a2540; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">
+    <div class="shield">🛡</div>
+    <span>CYBER MAP</span>
+  </div>
+  <div class="center-info">
+    <span class="wifi-icon">📡</span>
+    <span id="node-count">5 ACTIVE NODES</span>
+  </div>
+  <div class="clock-area">
+    <div class="time" id="clock">00:00:00</div>
+    <div class="label">GLOBAL NETWORK TIME</div>
+  </div>
+</div>
+
+<!-- MAP SECTION -->
+<div id="map-section">
+  <div id="map-header">
+    <h2>GLOBAL NETWORK ACTIVITY MAP</h2>
+    <div class="packets">
+      <span class="icon">📶</span>
+      <span id="packets-sec">0</span> PACKETS/SEC
+    </div>
+  </div>
+  <div id="map-container">
+    <canvas id="map-canvas"></canvas>
+
+    <div id="live-indicator">
+      <div class="dot"></div>
+      LIVE NETWORK
+    </div>
+
+    <div id="active-packets">
+      <span class="bolt">⚡</span>
+      <span class="count" id="active-packet-count">0</span>
+      ACTIVE PACKETS
+    </div>
+
+    <div id="coord-display">LAT: -- | LNG: --</div>
+
+    <div id="map-controls">
+      <button id="btn-zoom-in">+</button>
+      <button id="btn-zoom-out">−</button>
+      <button id="btn-reset">◎</button>
+      <button id="btn-toggle-lines">🔗</button>
+    </div>
+
+    <div id="node-info">
+      <div class="city-name"></div>
+      <div class="detail team-detail"></div>
+      <div class="detail ip-detail"></div>
+      <div class="detail lat-detail"></div>
+      <div class="detail lng-detail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NETWORK STATUS BARS -->
+<div id="network-status"></div>
+
+<!-- TEAM CARDS -->
+<div id="teams-section">
+  <h2><span class="icon">👥</span> ACTIVE CYBER TEAMS</h2>
+  <div id="team-cards"></div>
+</div>
+
+<!-- FLAG -->
+<div id="flag-box"></div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
